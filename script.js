@@ -104,9 +104,6 @@ function getPossibleMoves(x, y) {
     // already moved into case
     else if(tile.data[x + 1][y] == 1)
         right = false;
-
-    // do backtracking
-
     
     let possible = [];
     if(left)
@@ -118,8 +115,28 @@ function getPossibleMoves(x, y) {
     if(down)
         possible.push([x, y + 1]);
     
+    //console.log(path.length, tile.data.length * tile.data[0].length);
+    // normal move
     if(possible.length > 0)
         return possible;
+    // backtrack
+    // DOES NOT WORK
+    // maybe move to iteration loop
+    else if(path.length < (tile.data.length * tile.data[0].length)) {
+        console.log("backtracking");
+        // remove last movement of path
+        path.pop();
+
+        // make removed part of path availible as a move
+        tile.data[pos.x][pos.y] = 1;
+
+        // update position
+        pos.x = path[path.length - 1][0];
+        pos.y = path[path.length - 1][1];
+
+        getPossibleMoves(pos.x, pos.y);
+    }
+    // entire board is filled
     else
         return false;
 }
@@ -138,12 +155,16 @@ function renderBackground() {
     }
 }
 
-function renderPath(firstTime) {
+function renderPath() {
+    r.clearRect(0, 0, w, h);
+
+    renderBackground();
+
     r.strokeStyle = "#3F51B5";
     r.lineWidth = 5;
     let offset = tile.size / 4;
 
-    if(firstTime) {
+    /*if(firstTime) {
         r.fillStyle = "#2ECC71";
 
         r.fillRect(
@@ -158,7 +179,7 @@ function renderPath(firstTime) {
             //height
             tile.size / 2
             )
-    }
+    }*/
 
     r.moveTo(
         // x
