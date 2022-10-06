@@ -1,3 +1,20 @@
+/**
+ * TODO:
+ * -Get rid of ignoreMove and instead use following:
+ * -When at dead end, make current position unreachable (make it 1) and push it to an array, 
+ *      then with backTracking boolean keep backtracking until a valid move is found, 
+ *      and when a valid move is found set all of the tiles in the array to a 
+ *      reachable state (make them 0), and then clear the array. By doing this, 
+ *      should be able to keep going until the path.length is the same length as 
+ *      the total number of tiles (which is tile.data.length * tile.data[0].length)
+ * -Make maze generation work by getting rid of array and basically make any already visited
+ *      tile unreachable, but backtrack to next availible spot. To render, don't clear each
+ *      render call, and remove background tiles
+ * -Improve rendering by making everything more scalable with tiles, line size, and space 
+ *      between lines. Also, maybe make everything centered on screen. And, maybe add 
+ *      controls/ customization such as color, board size, and self-avoiding walk or maze.
+ */
+
 let c = document.getElementById("canvas");
 let r = c.getContext("2d");
 // c.width = Math.floor(window.innerWidth * 0.95);
@@ -8,14 +25,19 @@ let w = c.width;
 let h = c.height;
 let i = 0;
 let max = 500;
-let showBackground = false;
+let ignoreMove = [-1, 1];
+let backTracking = false;
+let setBackToValidMoves = [];
+
+let showBackground = true;
 // this was mistankenly discovered but
-let mazeMode = true;
+let mazeMode = false;
 if(mazeMode)
     showBackground = false;
 
 let tile = {
-    size: w / 50,
+    pathColor: "#EC407A",
+    size: w / 10,
     data: [],
     generateData: () => {
         let repeat = w / tile.size;
@@ -51,17 +73,16 @@ function generatePath() {
 generatePath();
 
 function iteration() {
+    // console.log(i, path.length, tile.data.length * tile.data[0].length);
     if(path.length < tile.data.length * tile.data[0].length) {
-        console.log(i);
+        //console.log(i);
         ++i;
-
-        // to not ignore any moves, because for backtracking only,
-        // initialize as a position that is not valid;
-        let ignoreMove = [-1, -1];
 
         let possible = getPossibleMoves(pos.x, pos.y, ignoreMove);
 
         if(possible != false) {
+            // console.log("regular move");
+            ignoreMove = [-1, -1];
             let newMove = Math.floor(Math.random() * possible.length);
 
             // set new position
@@ -73,30 +94,34 @@ function iteration() {
 
             // remove new position from available positions
             tile.data[pos.x][pos.y] = 1;
-
-            renderPath();
         }
         // backtracking
         else {
-            console.log("backtracking");
+            backTracking = true;
+            // console.log("backtracking");
             // when backtracking ignore tile in before
             ignoreMove = [pos.x, pos.y];
+            // console.log("ignore should be " + ignoreMove);
 
             // remove last movement of path
             path.pop();
 
             // make removed part of path availible as a move
-            tile.data[pos.x][pos.y] = 1;
+            tile.data[pos.x][pos.y] = 0;
+            setBackToValidMoves.push([pos.x, pos.y])
 
             // update position
             pos.x = path[path.length - 1][0];
             pos.y = path[path.length - 1][1];
         }
 
-        if(mazeMode)
+        renderPath();
+
+        // no delay for maze mode or if backtracking
+        if(mazeMode/* || possible == false*/)
             window.setTimeout(iteration, 0);
         else
-            window.setTimeout(iteration, 50);
+            window.setTimeout(iteration, 200);
     }
 }
 
@@ -105,7 +130,12 @@ function getPossibleMoves(x, y, ignoreMove) {
     let right = true;
     let up = true;
     let down = true;
+
+    // console.log("pos " + x + ", " + y);
+    console.log("ignore " + ignoreMove);
     
+
+
     // edge case
     if(y == 0)
         up = false;
@@ -167,34 +197,39 @@ function renderBackground() {
     }
 }
 
-function renderPath() {    
-    if(mazeMode) {
-        r.strokeStyle = "#3F51B5";
-        r.lineWidth = 5;
-        let offset = tile.size / 4;
+function renderPath() {
+    r.strokeStyle = tile.pathColor;
+    r.lineWidth = 5;
+    let offset = tile.size / 4;
+
+    r.clearRect(0, 0, w, h);
+
+    if(showBackground)
+        renderBackground();
+
+    for(let i = 0; i < path.length - 1; i++) {
+        r.beginPath();
 
         r.moveTo(
             // x
-            (path[[path.length - 2]][0] * tile.size) + 
+            (path[[i]][0] * tile.size) + 
             offset, 
             // y
-            (path[path.length - 2][1] * tile.size) + 
-            offset);
-        
+            (path[i][1] * tile.size) + 
+            offset
+            );
+
         r.lineTo(
             // x
-            (path[[path.length - 1]][0] * tile.size) + 
+            (path[[i + 1]][0] * tile.size) +
             offset, 
             // y
-            (path[path.length - 1][1] * tile.size) + 
-            offset);
+            (path[i + 1][1] * tile.size) + 
+            offset
+            );
         
         r.stroke();
-    }
-    else {
-        r.clearRect(0, 0, w, h);
 
-        if(showBackground)
-            renderBackground();
+        r.closePath();
     }
 }
